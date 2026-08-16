@@ -271,6 +271,10 @@ int tnt_output_tokens(const char *file_path, char **tokens, size_t count, char d
 	FILE *file = stdout;
 	int should_close = 0;
 
+	if (count == 0) {
+		return TNT_OK;
+	}
+
 	if (file_path) {
 		file = fopen(file_path, "w");
 		if (!file) {
@@ -279,18 +283,18 @@ int tnt_output_tokens(const char *file_path, char **tokens, size_t count, char d
 		should_close = 1;
 	}
 
-	for (size_t i = 0; i < count; i++) {
-		if (i == count - 1) {
-			if (fputs(tokens[i], file) == EOF) {
-				if (should_close) fclose(file);
-				return TNT_ERR_OFILE;
-			}
-		} else {
-			if (fprintf(file, "%s%c", tokens[i], delim) < 0) {
-				if (should_close) fclose(file);
-				return TNT_ERR_OFILE;
-			}
+	setvbuf(file, NULL, _IOFBF, 64 * 1024);
+
+	for (size_t i = 0; i < count - 1; i++) {
+		if (fputs(tokens[i], file) == EOF || fputc(delim, file) == EOF) {
+			if (should_close) fclose(file);
+			return TNT_ERR_OFILE;
 		}
+	}
+
+	if (fputs(tokens[count - 1], file) == EOF) {
+		if (should_close) fclose(file);
+		return TNT_ERR_OFILE;
 	}
 
 	char closing = '\n';
