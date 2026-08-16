@@ -147,11 +147,27 @@ int tnt_prng_init(uint64_t seed, unsigned flags) {
 	}
 }
 
-/* Lemire's fastrange algorithm: fast uniform range reduction
+/* Lemire's FastRange algorithm (unbiased 64-bit rejection sampling)
  * Lemire, D. (2018). Fast Random Integer Generation in an Interval.
- * arXiv:1805.10941 */
-static inline uint64_t fr64(uint64_t w, uint64_t p) {
-	return (uint64_t)(((__uint128_t)w * (__uint128_t)p) >> 64);
+ * arXiv:1805.10941
+ */
+uint64_t fr64_unbiased(uint64_t range64) {
+	if (range64 <= 1) return 0;
+
+	uint64_t rnd64 = next();
+	__uint128_t prod128 = (__uint128_t)rnd64 * range64;
+	uint64_t prod64 = (uint64_t)prod128;
+
+	if (prod64 < range64) {
+		uint64_t thresh64 = -range64 % range64;
+		while (prod64 < thresh64) {
+			rnd64 = next();
+			prod128 = (__uint128_t)rnd64 * range64;
+			prod64 = (uint64_t)prod128;
+		}
+	}
+
+	return (uint64_t)(prod128 >> 64);
 }
 
 int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_t *count) {
@@ -298,8 +314,7 @@ void tnt_shuffle_tokens(char **tokens, size_t count, size_t k) {
 
 	for (size_t i = 0; i < k; i++) {
 		uint64_t range = count - i;
-		uint64_t rand = next();
-		uint64_t j = i + fr64(rand, range);
+		uint64_t j = i + fr64_unbiased(range);
 
 		char *temp = tokens[i];
 		tokens[i] = tokens[j];
