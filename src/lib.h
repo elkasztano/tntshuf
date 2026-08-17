@@ -29,16 +29,13 @@ int tnt_prng_init_random(uint64_t *state, size_t n);
 
 /* Returns 0 on success, non-zero error code on failure
  * if file is NULL the function reads from stdin */
-int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_t *count);
+int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_t *count, char **raw_buf_out);
 
 /* Fisher-Yates shuffle of tokens array */
 void tnt_shuffle_tokens(char **tokens, size_t count, size_t k);
 
 /* Output tokens, stripping delimiter from last token */
 int tnt_output_tokens(const char *file_path, char **tokens, size_t count, char delim, unsigned flags);
-
-/* Free tokens array */
-void tnt_free_tokens(char **tokens, size_t count);
 
 /* Human readable errors */
 const char *tnt_err_str(int err);

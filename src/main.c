@@ -12,6 +12,7 @@ int check_err(int err);
 int main(int argc, char **argv) {
 	int err = TNT_OK;
 	char **tokens = NULL;
+	char *raw_buf = NULL;
 	size_t count = 0;
 	size_t k = 0;
 
@@ -30,7 +31,7 @@ int main(int argc, char **argv) {
 		tokens = (char **)cli.echo;
 		count = cli.echo_count;
 	} else {
-		err = tnt_read_tokens(cli.ifile, cli.delim, &tokens, &count);
+		err = tnt_read_tokens(cli.ifile, cli.delim, &tokens, &count, &raw_buf);
 		if (check_err(err))
 			goto cleanup;
 	}
@@ -47,8 +48,12 @@ int main(int argc, char **argv) {
 		goto cleanup; 
 
 cleanup:
-	if (!(cli.flags & TNT_ECHO) && tokens != NULL)
-		tnt_free_tokens(tokens, count);
+	/* do not free tokens if they point to command line arguments */
+	if (!(cli.flags & TNT_ECHO))
+		free(tokens);
+
+	/* raw_buf is either a valid malloc pointer or NULL */
+	free(raw_buf);
 
 	return (err != TNT_OK) ? EXIT_FAILURE : EXIT_SUCCESS;
 }

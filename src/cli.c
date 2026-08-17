@@ -78,7 +78,7 @@ tnt_cli_t tnt_cli(int argc, char **argv) {
 				print_help_text(*argv);
 				exit(0);
 			case 'V':
-				printf("tntshuf 1.3\n");
+				printf("tntshuf 1.4\n");
 				exit(0);
 			case '?':
 				print_help_text(*argv);
