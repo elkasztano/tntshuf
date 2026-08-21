@@ -5,6 +5,14 @@
 #include <stdint.h>
 #include "cli.h"
 
+#ifndef VERSION
+#define VERSION "0.0"
+#endif
+
+#ifndef TRIPLET
+#define TRIPLET "unknown"
+#endif
+
 void print_help_text(char *progname);
 
 tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
@@ -78,7 +86,7 @@ tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 				print_help_text(*argv);
 				exit(0);
 			case 'V':
-				printf("tntshuf 1.5\n");
+				printf("tntshuf %s\n%s\n", VERSION, TRIPLET);
 				exit(0);
 			case '?':
 				print_help_text(*argv);

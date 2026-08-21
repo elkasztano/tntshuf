@@ -1,4 +1,6 @@
 APPNAME   := $(notdir $(CURDIR))
+VERSION   := 1.6
+TRIPLET   := $(shell $(CC) -dumpmachine 2>/dev/null || uname -m)
 TARGETDIR := target
 OBJDIR    := $(TARGETDIR)/obj
 SRCDIR    := src
@@ -6,7 +8,7 @@ SRCDIR    := src
 # Compiler and Flags
 CC        ?= gcc
 CFLAGS    ?= -Wall -Wextra -O2
-CFLAGS    += -MMD -MP
+CFLAGS    += -MMD -MP -DVERSION=\"$(VERSION)\" -DTRIPLET=\"$(TRIPLET)\"
 
 # specify libraries here, e.g. -lm for the math library
 LDLIBS    := 
