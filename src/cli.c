@@ -7,7 +7,7 @@
 
 void print_help_text(char *progname);
 
-tnt_cli_t tnt_cli(int argc, char **argv) {
+tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 	int c, option_index = 0;
 
 	tnt_cli_t cli;
@@ -78,7 +78,7 @@ tnt_cli_t tnt_cli(int argc, char **argv) {
 				print_help_text(*argv);
 				exit(0);
 			case 'V':
-				printf("tntshuf 1.4\n");
+				printf("tntshuf 1.5\n");
 				exit(0);
 			case '?':
 				print_help_text(*argv);
@@ -90,9 +90,17 @@ tnt_cli_t tnt_cli(int argc, char **argv) {
 	}
 
 	/* handle remaining arguments for 'echo' flag */
-	cli.echo_count = argc - optind;
+	cli.echo_count = (size_t)(argc - optind);
 	if (cli.echo_count > 0) {
-		cli.echo = (const char **)&argv[optind];
+		cli.echo = malloc(cli.echo_count * sizeof(tnt_token_t));
+		if (cli.echo != NULL) {
+			for (size_t i = 0; i < cli.echo_count; i++) {
+				cli.echo[i].ptr = argv[optind + i];
+				cli.echo[i].len = (uint32_t)strlen(argv[optind + i]);
+			}
+		} else {
+			*err = TNT_ERR_NOMEM;
+		}
 	}
 
 	return(cli);

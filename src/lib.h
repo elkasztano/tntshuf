@@ -15,6 +15,11 @@
 #define TNT_ERR_IFILE        7
 #define TNT_ERR_OFILE        8
 
+typedef struct {
+	char *ptr;
+	uint32_t len;
+} tnt_token_t;
+
 /* select PRNG */
 int tnt_select_prng(char *selection);
 
@@ -29,13 +34,13 @@ int tnt_prng_init_random(uint64_t *state, size_t n);
 
 /* Returns 0 on success, non-zero error code on failure
  * if file is NULL the function reads from stdin */
-int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_t *count, char **raw_buf_out);
+int tnt_read_tokens(const char *file_path, char delim, tnt_token_t **tokens_out, size_t *count, char **raw_buf_out);
 
 /* Fisher-Yates shuffle of tokens array */
-void tnt_shuffle_tokens(char **tokens, size_t count, size_t k);
+void tnt_shuffle_tokens(tnt_token_t *tokens, size_t count, size_t k);
 
 /* Output tokens, stripping delimiter from last token */
-int tnt_output_tokens(const char *file_path, char **tokens, size_t count, char delim, unsigned flags);
+int tnt_output_tokens(const char *file_path, const tnt_token_t *tokens, size_t count, char delim, unsigned flags);
 
 /* Human readable errors */
 const char *tnt_err_str(int err);

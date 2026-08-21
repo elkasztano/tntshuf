@@ -171,7 +171,7 @@ uint64_t fr64_unbiased(uint64_t range64) {
 }
 
 /* caller is responsible for freeing raw_buf_out */
-int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_t *count, char **raw_buf_out) {
+int tnt_read_tokens(const char *file_path, char delim, tnt_token_t **tokens_out, size_t *count, char **raw_buf_out) {
 	FILE *file = stdin;
 	int should_close = 0;
 
@@ -196,7 +196,7 @@ int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_
 
 	size_t ptr_cap = 1024;
 	*count = 0;
-	char **tokens = malloc(ptr_cap * sizeof(char *));
+	tnt_token_t *tokens = malloc(ptr_cap * sizeof(tnt_token_t));
 	if (!tokens) {
 		free(raw_buf);
 		if (should_close) fclose(file);
@@ -243,7 +243,7 @@ int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_
 			raw_buf[i] = '\0';
 			if (*count >= ptr_cap) {
 				ptr_cap *= 2;
-				char **new_toks = realloc(tokens, ptr_cap * sizeof(char *));
+				tnt_token_t *new_toks = realloc(tokens, ptr_cap * sizeof(tnt_token_t));
 				if (!new_toks) {
 					free(raw_buf);
 					free(tokens);
@@ -251,7 +251,8 @@ int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_
 				}
 				tokens = new_toks;
 			}
-			tokens[*count] = start;
+			tokens[*count].ptr = start;
+			tokens[*count].len = (uint32_t)(raw_buf + i - start);
 			(*count)++;
 			start = raw_buf + i + 1;
 		}
@@ -261,7 +262,7 @@ int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_
 	if (start < raw_buf + raw_len && *start != '\0') {
 		if (*count >= ptr_cap) {
 			ptr_cap *= 2;
-			char **new_toks = realloc(tokens, ptr_cap * sizeof(char *));
+			tnt_token_t *new_toks = realloc(tokens, ptr_cap * sizeof(tnt_token_t));
 			if (!new_toks) {
 				free(raw_buf);
 				free(tokens);
@@ -269,7 +270,8 @@ int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_
 			}
 			tokens = new_toks;
 		}
-		tokens[*count] = start;
+		tokens[*count].ptr = start;
+		tokens[*count].len = (uint32_t)(raw_buf + raw_len - start);
 		(*count)++;
 	}
 
@@ -278,7 +280,7 @@ int tnt_read_tokens(const char *file_path, char delim, char ***tokens_out, size_
 	return TNT_OK;
 }
 
-int tnt_output_tokens(const char *file_path, char **tokens, size_t count, char delim, unsigned flags) {
+int tnt_output_tokens(const char *file_path, const tnt_token_t *tokens, size_t count, char delim, unsigned flags) {
 	FILE *file = stdout;
 	int should_close = 0;
 
@@ -297,13 +299,14 @@ int tnt_output_tokens(const char *file_path, char **tokens, size_t count, char d
 	setvbuf(file, NULL, _IOFBF, 64 * 1024);
 
 	for (size_t i = 0; i < count - 1; i++) {
-		if (fputs(tokens[i], file) == EOF || fputc(delim, file) == EOF) {
+		if (fwrite(tokens[i].ptr, 1, tokens[i].len, file) != tokens[i].len ||
+		    fputc(delim, file) == EOF) {
 			if (should_close) fclose(file);
 			return TNT_ERR_OFILE;
 		}
 	}
 
-	if (fputs(tokens[count - 1], file) == EOF) {
+	if (fwrite(tokens[count - 1].ptr, 1, tokens[count - 1].len, file) != tokens[count - 1].len) {
 		if (should_close) fclose(file);
 		return TNT_ERR_OFILE;
 	}
@@ -324,14 +327,14 @@ int tnt_output_tokens(const char *file_path, char **tokens, size_t count, char d
 	return TNT_OK;
 }
 
-void tnt_shuffle_tokens(char **tokens, size_t count, size_t k) {
+void tnt_shuffle_tokens(tnt_token_t *tokens, size_t count, size_t k) {
 	if (k > count || k < 1) return;
 
 	for (size_t i = 0; i < k; i++) {
 		uint64_t range = count - i;
 		uint64_t j = i + fr64_unbiased(range);
 
-		char *temp = tokens[i];
+		tnt_token_t temp = tokens[i];
 		tokens[i] = tokens[j];
 		tokens[j] = temp;
 	}

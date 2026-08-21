@@ -1,6 +1,7 @@
 #ifndef CLI_H
 #define CLI_H
 #include <stdint.h>
+#include "lib.h"
 
 #define TNT_USERSEED (1 << 0)
 #define TNT_NONEWLINE (1 << 1)
@@ -12,14 +13,14 @@ typedef struct {
 	char delim;
 	char *ifile;
 	char *ofile;
-	const char **echo;
-	int echo_count;
+	tnt_token_t *echo;
+	size_t echo_count;
 	unsigned flags;
 	char *generator;
 	uint64_t n;
 } tnt_cli_t;
 
-tnt_cli_t tnt_cli(int argc, char **argv);
+tnt_cli_t tnt_cli(int argc, char **argv, int *err);
 
 #endif
 
