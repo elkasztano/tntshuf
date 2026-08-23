@@ -2,12 +2,13 @@
 
 Blow up the order of your lists. `tntshuf` is a lightweight C command-line utility partially inspired by GNU shuf, developed as a toy project on a 2014 Acer Aspire Nitro V15 running Debian 13.
 
-`tntshuf` shuffles input tokens read from stdin and writes them to stdout, with support for arbitrary delimiters and selectable PRNGs. It also supports file-based I/O and shuffling command-line arguments.
+`tntshuf` shuffles input tokens read from stdin and writes them to stdout, with support for arbitrary delimiters and selectable PRNGs, as well as strictly deterministic permutation algorithms. It also supports file-based I/O and shuffling command-line arguments.
 
 ## Features
 
 - **Fisher-Yates shuffling algorithm** for random permutations
 - **Selectable PRNGs**: Xoshiro256PlusPlus (recommended), Xoroshiro1024PlusPlus (for larger lists), SplitMix64 or Xorshift64Star
+- **Selectable deterministic permutation algorithms**: Milk shuffle, Mongean shuffle
 - **Arbitrary delimiters**: Use any character to separate tokens (defaults to newline)
 - **stdin/stdout I/O**: Simple, composable pipeline behavior
 - **Optional file-based I/O**: Specify input and/or output file
@@ -63,6 +64,7 @@ tntshuf [options]
 | `-s`   | `--seed`            | `SEED`   | Seed value for the PRNG. If not provided, the seed is read from `/dev/urandom`.|
 | `-d`   | `--delimiter`       | `CHAR`   | Token delimiter (any single character). Defaults to newline (`\n`).            |
 | `-g`   | `--generator`       | `PRNG`   | Select the underlying PRNG algorithm (see [Generators](#generators) below).    |
+| `-p`   | `--permutator`      | `PERM`   | Select deterministic permutation algorithm (see [Permutators](#permutators)).  |
 | `-n`   | `--head-count`      | `N`      | Output only the first N elements from the shuffled list.                       |
 | `-l`   | `--no-newline`      | —        | Omit the trailing newline from the output.                                     |
 | `-z`   | `--zero-terminated` | —        | Set delimiter to NULL (`'\0'`).                                                |
@@ -78,6 +80,19 @@ The `--generator` option accepts the following PRNG algorithms:
 - `splitmix64`
 - `xorshift64star`
 - `xoroshiro1024pp`
+
+The array will be shuffled using the [Fisher-Yates algorithm](#fisher-yates-shuffle).
+
+#### Permutators
+
+The `--permutator` option accepts the following permutation algorithms:
+
+- `milk` (see [Milk Shuffle](#milk-shuffle))
+- `monge` (see [Mongean Shuffle](#mongean-shuffle))
+
+These permutation algorithms are strictly deterministic and don't need a seed.
+
+Generators and Permutators are **mutually exclusive**. Following standard POSIX command-line conventions, if both flags are provided, **the last option specified on the command line takes precedence**.
 
 ### Examples
 
@@ -116,6 +131,11 @@ The `--generator` option accepts the following PRNG algorithms:
 - Treat arguments as input line and use the Xorshift64Star PRNG:
   ```bash
   tntshuf -e apple banana cherry date -g xorshift64star
+  ```
+
+- Permutate array using the milk algorithm:
+  ```bash
+  seq 1 10 | tntshuf -p milk
   ```
 
 ## Algorithms
@@ -160,3 +180,16 @@ An alternative PRNG is **Xorshift64Star**, also developed by **Sebastiano Vigna*
 
 - **Reference**: Lemire, D. (2018). "Fast Random Integer Generation in an Interval." [arXiv:1805.10941](https://arxiv.org/abs/1805.10941)
 
+### Deterministic Permutators
+
+#### Milk Shuffle
+Also known as the *Fold Shuffle* or *Outside-In Interleave*.
+* **Mechanism:** Alternately selects elements from the front (top) and back (bottom) of the input array.
+* **Pattern:** `[1, 2, 3, 4, 5, 6]` -> `[1, 6, 2, 5, 3, 4]`
+* **Properties:** Populates odd output positions from the front half of the array and even output positions from the reversed back half.
+
+#### Mongean Shuffle
+A deterministic card shuffle named after French mathematician Gaspard Monge.
+* **Mechanism:** Places the initial element at a central pivot, then alternately places subsequent elements above (top) and below (bottom) the stack.
+* **Pattern:** `[1, 2, 3, 4, 5, 6]` -> `[6, 4, 2, 1, 3, 5]`
+* **Properties:** Gathers all even-indexed elements at the front in reverse order and all odd-indexed elements at the back in original order.

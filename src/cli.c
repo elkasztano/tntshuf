@@ -29,6 +29,7 @@ tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 	cli.ofile = NULL;
 	cli.flags = 0;
 	cli.generator = "xoshiro256pp";
+	cli.permutator = NULL;
 	cli.n = UINT64_MAX;
 
 	while( 1 ) {
@@ -38,6 +39,7 @@ tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 			{ "seed", required_argument, 0, 's' },
 			{ "delimiter", required_argument, 0, 'd' },
 			{ "generator", required_argument, 0, 'g' },
+			{ "permutator", required_argument, 0, 'p' },
 			{ "head-count", required_argument, 0, 'n' },
 			{ "no-newline", no_argument, 0, 'l' },
 			{ "zero-terminated", no_argument, 0, 'z' },
@@ -47,7 +49,7 @@ tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 			{ 0, 0, 0, 0 }
 		};
 
-		c = getopt_long(argc, argv, "hVi:o:s:d:g:n:lze", long_options, &option_index);
+		c = getopt_long(argc, argv, "hVi:o:s:d:g:p:n:lze", long_options, &option_index);
 
 		if(c == -1)
 			break;
@@ -68,6 +70,11 @@ tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 				break;
 			case 'g':
 				cli.generator = optarg;
+				cli.permutator = NULL;
+				break;
+			case 'p':
+				cli.permutator = optarg;
+				cli.generator = NULL;
 				break;
 			case 'n':
 				cli.n = strtoull(optarg, NULL, 10);
@@ -123,6 +130,8 @@ void print_help_text(char *progname) {
 			"-d, --delimiter ......... delimiter, defaults to newline\n"
 			"-g, --generator ......... select PRNG, values: \"splitmix64\", \"xorshift64star\",\n"
 			"                          \"xoroshiro1024pp\", default: \"xoshiro256pp\"\n"
+			"-p, --permutator ........ select deterministic permutation algorithm\n"
+			"                          values: \"milk\", \"monge\"\n"
 			"-n, --head-count ........ output only first N elements from shuffled list\n"
 			"-l, --no-newline ........ omit new line at the end\n"
 			"-z, --zero-terminated ... set delimiter to NULL ('\\0')\n"

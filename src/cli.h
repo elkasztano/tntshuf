@@ -17,6 +17,7 @@ typedef struct {
 	size_t echo_count;
 	unsigned flags;
 	char *generator;
+	char *permutator;
 	uint64_t n;
 } tnt_cli_t;
 

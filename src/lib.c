@@ -12,6 +12,7 @@ static uint64_t x;
 static int p;
 static uint64_t state[TNT_MAX_STATESIZE];
 static uint64_t (*next)(void);
+static int (*perm_fn)(tnt_token_t*, size_t, size_t);
 static int state_size = TNT_MAX_STATESIZE;
 
 static inline uint64_t rl(const uint64_t v, int k) {
@@ -75,6 +76,84 @@ uint64_t xoroshiro1024pp(void) {
 	return result;
 }
 
+/* Extract top k elements in Milk Shuffle order into tokens[0..k-1] */
+int milk_perm(tnt_token_t *tokens, size_t count, size_t k) {
+	tnt_token_t *temp;
+	size_t left = 0;
+	size_t right;
+	size_t idx = 0;
+
+	if (!tokens || count == 0 || k == 0) {
+		return TNT_OK;
+	}
+
+	if (k > count) {
+		k = count;
+	}
+
+	right = count - 1;
+	temp = malloc(k * sizeof(tnt_token_t));
+	if (!temp) {
+		return TNT_ERR_NOMEM;
+	}
+
+	while (left <= right && idx < k) {
+		temp[idx++] = tokens[left++];
+		if (left <= right && idx < k) {
+			temp[idx++] = tokens[right--];
+		}
+	}
+
+	/* Copy extracted subset back into tokens array */
+	memcpy(tokens, temp, k * sizeof(tnt_token_t));
+
+	free(temp);
+	return TNT_OK;
+}
+
+/* Perform a Mongean Shuffle and extract top k elements into tokens[0..k-1] */
+int monge_perm(tnt_token_t *tokens, size_t count, size_t k) {
+	tnt_token_t *temp;
+	size_t top;
+	size_t bottom;
+
+	if (!tokens || count == 0 || k == 0) {
+		return TNT_OK;
+	}
+
+	if (k > count) {
+		k = count;
+	}
+
+	temp = malloc(count * sizeof(tnt_token_t));
+	if (!temp) {
+		return TNT_ERR_NOMEM;
+	}
+
+	/* Starting pivot position in destination array */
+	top = count / 2;
+	bottom = top;
+
+	temp[top] = tokens[0];
+
+	/* Alternate placing elements at the top (left) or bottom (right) */
+	for (size_t i = 1; i < count; i++) {
+		if (i % 2 == 1) {
+			top--;
+			temp[top] = tokens[i];
+		} else {
+			bottom++;
+			temp[bottom] = tokens[i];
+		}
+	}
+
+	/* Copy extracted subset back into tokens array */
+	memcpy(tokens, temp, k * sizeof(tnt_token_t));
+
+	free(temp);
+	return TNT_OK;
+}
+
 int tnt_select_prng(char *selection) {
 	if (!strcmp(selection, "xoshiro256pp")) {
 		state_size = 4;
@@ -92,6 +171,22 @@ int tnt_select_prng(char *selection) {
 		return TNT_ERR_UNKNOWN_GEN;
 	}
 	return TNT_OK;
+}
+
+int tnt_select_perm(char *selection) {
+	if (!strcmp(selection, "milk")) {
+		perm_fn = &milk_perm;
+	} else if (!strcmp(selection, "monge")) {
+		perm_fn = &monge_perm;
+	} else {
+		return TNT_ERR_UNKNOWN_PERM;
+	}
+	return TNT_OK;
+}
+
+/* simple wrapper function for deterministic permutation algorithms */
+int tnt_permutate_deterministic(tnt_token_t *tokens, size_t count, size_t k) {
+	return perm_fn(tokens, count, k);
 }
 
 void tnt_prng_init_seed(uint64_t seed) {
@@ -358,6 +453,8 @@ const char *tnt_err_str(int err) {
 			return "file input error";
 		case TNT_ERR_OFILE:
 			return "file output error";
+		case TNT_ERR_UNKNOWN_PERM:
+			return "unknown deterministic permutation algorithm";
 		default:
 			return "undefined error";
 	}

@@ -14,6 +14,7 @@
 #define TNT_ERR_UNKNOWN_GEN  6
 #define TNT_ERR_IFILE        7
 #define TNT_ERR_OFILE        8
+#define TNT_ERR_UNKNOWN_PERM 9
 
 typedef struct {
 	char *ptr;
@@ -22,6 +23,9 @@ typedef struct {
 
 /* select PRNG */
 int tnt_select_prng(char *selection);
+
+/* select deterministic algorithm */
+int tnt_select_perm(char *selection);
 
 /* PRNG initialization wrapper */
 int tnt_prng_init(uint64_t seed, unsigned flags);
@@ -38,6 +42,9 @@ int tnt_read_tokens(const char *file_path, char delim, tnt_token_t **tokens_out,
 
 /* Fisher-Yates shuffle of tokens array */
 void tnt_shuffle_tokens(tnt_token_t *tokens, size_t count, size_t k);
+
+/* Deterministic shuffle of tokens array */
+int tnt_permutate_deterministic(tnt_token_t *tokens, size_t count, size_t k);
 
 /* Output tokens, stripping delimiter from last token */
 int tnt_output_tokens(const char *file_path, const tnt_token_t *tokens, size_t count, char delim, unsigned flags);

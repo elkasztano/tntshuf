@@ -19,14 +19,25 @@ int main(int argc, char **argv) {
 		goto cleanup;
 	}
 
-	err = tnt_select_prng(cli.generator);
-	if (check_err(err)) {
-		goto cleanup;
-	}
+	if (cli.generator != NULL) {
 
-	err = tnt_prng_init(cli.seed, cli.flags);
-	if (check_err(err)) {
-		goto cleanup;
+		err = tnt_select_prng(cli.generator);
+		if (check_err(err)) {
+			goto cleanup;
+		}
+
+		err = tnt_prng_init(cli.seed, cli.flags);
+		if (check_err(err)) {
+			goto cleanup;
+		}
+
+	} else if (cli.permutator != NULL) {
+
+		err = tnt_select_perm(cli.permutator);
+		if (check_err(err)) {
+			goto cleanup;
+		}
+
 	}
 
 	if (cli.flags & TNT_ECHO) {
@@ -41,7 +52,14 @@ int main(int argc, char **argv) {
 
 	k = (cli.n < count) ? cli.n : count;
 
-	tnt_shuffle_tokens(tokens, count, k);
+	if (cli.generator != NULL) {
+		tnt_shuffle_tokens(tokens, count, k);
+	} else if (cli.permutator != NULL) {
+		err = tnt_permutate_deterministic(tokens, count, k);
+		if (check_err(err)) {
+			goto cleanup;
+		}
+	}
 
 	err = tnt_output_tokens(cli.ofile, tokens, k, cli.delim, cli.flags);
 	if (check_err(err)) {
