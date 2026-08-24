@@ -174,9 +174,9 @@ int tnt_select_prng(char *selection) {
 }
 
 int tnt_select_perm(char *selection) {
-	if (!strcmp(selection, "milk")) {
+	if (!strncmp(selection, "milk", 4)) {
 		perm_fn = &milk_perm;
-	} else if (!strcmp(selection, "monge")) {
+	} else if (!strncmp(selection, "monge", 5)) {
 		perm_fn = &monge_perm;
 	} else {
 		return TNT_ERR_UNKNOWN_PERM;
@@ -455,6 +455,8 @@ const char *tnt_err_str(int err) {
 			return "file output error";
 		case TNT_ERR_UNKNOWN_PERM:
 			return "unknown deterministic permutation algorithm";
+		case TNT_ERR_INVALID_PERM:
+			return "invalid argument for permutation algorithm";
 		default:
 			return "undefined error";
 	}

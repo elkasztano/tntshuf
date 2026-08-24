@@ -30,6 +30,7 @@ tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 	cli.flags = 0;
 	cli.generator = "xoshiro256pp";
 	cli.permutator = NULL;
+	cli.perm_iter = 1;
 	cli.n = UINT64_MAX;
 
 	while( 1 ) {
@@ -75,6 +76,17 @@ tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 			case 'p':
 				cli.permutator = optarg;
 				cli.generator = NULL;
+
+				const char *delim = strchr(optarg, ':');
+				if (delim != NULL) {
+					char *endptr;
+					cli.perm_iter = strtoull(delim + 1, &endptr, 10);
+					if (*endptr != '\0' || *(delim + 1) == '-' || cli.perm_iter == 0) {
+						*err = TNT_ERR_INVALID_PERM;
+						cli.perm_iter = 1;
+					}
+				}
+
 				break;
 			case 'n':
 				cli.n = strtoull(optarg, NULL, 10);
@@ -131,7 +143,8 @@ void print_help_text(char *progname) {
 			"-g, --generator ......... select PRNG, values: \"splitmix64\", \"xorshift64star\",\n"
 			"                          \"xoroshiro1024pp\", default: \"xoshiro256pp\"\n"
 			"-p, --permutator ........ select deterministic permutation algorithm\n"
-			"                          values: \"milk\", \"monge\"\n"
+			"                          syntax: <algorithm>[:iterations] (default: 1)\n"
+			"                          algorithms: \"milk\", \"monge\"\n"
 			"-n, --head-count ........ output only first N elements from shuffled list\n"
 			"-l, --no-newline ........ omit new line at the end\n"
 			"-z, --zero-terminated ... set delimiter to NULL ('\\0')\n"

@@ -18,6 +18,7 @@ typedef struct {
 	unsigned flags;
 	char *generator;
 	char *permutator;
+	size_t perm_iter;
 	uint64_t n;
 } tnt_cli_t;
 

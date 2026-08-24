@@ -15,6 +15,7 @@
 #define TNT_ERR_IFILE        7
 #define TNT_ERR_OFILE        8
 #define TNT_ERR_UNKNOWN_PERM 9
+#define TNT_ERR_INVALID_PERM 10
 
 typedef struct {
 	char *ptr;

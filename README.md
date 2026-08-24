@@ -54,23 +54,22 @@ make clean
 ```bash
 tntshuf [options]
 ```
-
 ### Options
 
-| Option | Long Form           | Argument | Description                                                                    |
-| ------ | ------------------- | -------- | ------------------------------------------------------------------------------ |
-| `-i`   | `--input-file`      | `FILE`   | Input file path, defaults to stdin.                                            |
-| `-o`   | `--output-file`     | `FILE`   | Output file path, defaults to stdout. _Overwrites without prompt._             |
-| `-s`   | `--seed`            | `SEED`   | Seed value for the PRNG. If not provided, the seed is read from `/dev/urandom`.|
-| `-d`   | `--delimiter`       | `CHAR`   | Token delimiter (any single character). Defaults to newline (`\n`).            |
-| `-g`   | `--generator`       | `PRNG`   | Select the underlying PRNG algorithm (see [Generators](#generators) below).    |
-| `-p`   | `--permutator`      | `PERM`   | Select deterministic permutation algorithm (see [Permutators](#permutators)).  |
-| `-n`   | `--head-count`      | `N`      | Output only the first N elements from the shuffled list.                       |
-| `-l`   | `--no-newline`      | —        | Omit the trailing newline from the output.                                     |
-| `-z`   | `--zero-terminated` | —        | Set delimiter to NULL (`'\0'`).                                                |
-| `-e`   | `--echo`            | —        | Treat each argument as input line.                                             |
-| `-h`   | `--help`            | —        | Show help and exit.                                                            |
-| `-V`   | `--version`         | —        | Show version and exit.                                                         |
+| Option | Long Form           | Argument   | Description                                                                    |
+| ------ | ------------------- | ---------- | ------------------------------------------------------------------------------ |
+| `-i`   | `--input-file`      | `FILE`     | Input file path, defaults to stdin.                                            |
+| `-o`   | `--output-file`     | `FILE`     | Output file path, defaults to stdout. _Overwrites without prompt._             |
+| `-s`   | `--seed`            | `SEED`     | Seed value for the PRNG. If not provided, the seed is read from `/dev/urandom`.|
+| `-d`   | `--delimiter`       | `CHAR`     | Token delimiter (any single character). Defaults to newline (`\n`).            |
+| `-g`   | `--generator`       | `PRNG`     | Select the underlying PRNG algorithm (see [Generators](#generators) below).    |
+| `-p`   | `--permutator`      | `PERM[:N]` | Select deterministic permutation algorithm and optional iteration count `N` (default: 1; see [Permutators](#permutators)). |
+| `-n`   | `--head-count`      | `N`        | Output only the first N elements from the shuffled list.                       |
+| `-l`   | `--no-newline`      | —          | Omit the trailing newline from the output.                                     |
+| `-z`   | `--zero-terminated` | —          | Set delimiter to NULL (`'\0'`).                                                |
+| `-e`   | `--echo`            | —          | Treat each argument as input line.                                             |
+| `-h`   | `--help`            | —          | Show help and exit.                                                            |
+| `-V`   | `--version`         | —          | Show version and exit.                                                         |
 
 #### Generators
 
@@ -132,10 +131,13 @@ Generators and Permutators are **mutually exclusive**. Following standard POSIX 
   ```bash
   tntshuf -e apple banana cherry date -g xorshift64star
   ```
-
 - Permutate array using the milk algorithm:
   ```bash
   seq 1 10 | tntshuf -p milk
+  ```
+- Simulate card shuffle with four consecutive milk permutations:
+  ```bash
+  tntshuf -i deck.txt -p milk:4
   ```
 
 ## Algorithms

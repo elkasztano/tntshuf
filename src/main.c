@@ -55,9 +55,11 @@ int main(int argc, char **argv) {
 	if (cli.generator != NULL) {
 		tnt_shuffle_tokens(tokens, count, k);
 	} else if (cli.permutator != NULL) {
-		err = tnt_permutate_deterministic(tokens, count, k);
-		if (check_err(err)) {
-			goto cleanup;
+		for (size_t i = 0; i < cli.perm_iter; i++) {
+			err = tnt_permutate_deterministic(tokens, count, k);
+			if (check_err(err)) {
+				goto cleanup;
+			}
 		}
 	}
 
