@@ -144,7 +144,7 @@ void print_help_text(char *progname) {
 			"                          \"xoroshiro1024pp\", default: \"xoshiro256pp\"\n"
 			"-p, --permutator ........ select deterministic permutation algorithm\n"
 			"                          syntax: <algorithm>[:iterations] (default: 1)\n"
-			"                          algorithms: \"milk\", \"monge\"\n"
+			"                          algorithms: \"milk\", \"monge\", \"faro\"\n"
 			"-n, --head-count ........ output only first N elements from shuffled list\n"
 			"-l, --no-newline ........ omit new line at the end\n"
 			"-z, --zero-terminated ... set delimiter to NULL ('\\0')\n"

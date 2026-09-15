@@ -154,6 +154,43 @@ int monge_perm(tnt_token_t *tokens, size_t count, size_t k) {
 	return TNT_OK;
 }
 
+/* Perform a Faro Shuffle (Out-shuffle) and extract top k elements into tokens[0..k-1] */
+int faro_perm(tnt_token_t *tokens, size_t count, size_t k) {
+	tnt_token_t *temp;
+	size_t half;
+	size_t idx = 0;
+
+	if (!tokens || count == 0 || k == 0) {
+		return TNT_OK;
+	}
+
+	if (k > count) {
+		k = count;
+	}
+
+	temp = malloc(count * sizeof(tnt_token_t));
+	if (!temp) {
+		return TNT_ERR_NOMEM;
+	}
+
+	/* Divide deck into two halves (top half gets the extra card if count is odd) */
+	half = (count + 1) / 2;
+
+	/* Interleave elements from top half [0..half-1] and bottom half [half..count-1] */
+	for (size_t i = 0; i < half; i++) {
+		temp[idx++] = tokens[i];
+		if (i + half < count) {
+			temp[idx++] = tokens[i + half];
+		}
+	}
+
+	/* Copy extracted subset back into tokens array */
+	memcpy(tokens, temp, k * sizeof(tnt_token_t));
+
+	free(temp);
+	return TNT_OK;
+}
+
 int tnt_select_prng(char *selection) {
 	if (!strcmp(selection, "xoshiro256pp")) {
 		state_size = 4;
@@ -178,6 +215,8 @@ int tnt_select_perm(char *selection) {
 		perm_fn = &milk_perm;
 	} else if (!strncmp(selection, "monge", 5)) {
 		perm_fn = &monge_perm;
+	} else if (!strncmp(selection, "faro", 4)) {
+		perm_fn = &faro_perm;
 	} else {
 		return TNT_ERR_UNKNOWN_PERM;
 	}

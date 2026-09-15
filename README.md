@@ -88,6 +88,7 @@ The `--permutator` option accepts the following permutation algorithms:
 
 - `milk` (see [Milk Shuffle](#milk-shuffle))
 - `monge` (see [Mongean Shuffle](#mongean-shuffle))
+- `faro` (see [Faro Shuffle](#faro-shuffle))
 
 These permutation algorithms are strictly deterministic and don't need a seed.
 
@@ -195,3 +196,9 @@ A deterministic card shuffle named after French mathematician Gaspard Monge.
 * **Mechanism:** Places the initial element at a central pivot, then alternately places subsequent elements above (top) and below (bottom) the stack.
 * **Pattern:** `[1, 2, 3, 4, 5, 6]` -> `[6, 4, 2, 1, 3, 5]`
 * **Properties:** Gathers all even-indexed elements at the front in reverse order and all odd-indexed elements at the back in original order.
+
+#### Faro Shuffle
+Also known as the *Weave Shuffle* or *Perfect Out-Shuffle*.
+* **Mechanism:** Splits the input array into two equal halves and perfectly interleaves elements card-by-card, starting with the first card of the top half.
+* **Pattern:** `[1, 2, 3, 4, 5, 6]` -> `[1, 4, 2, 5, 3, 6]`
+* **Properties:** Preserves the outer boundary elements for even-sized arrays while systematically interleaving items from the front half and back half.
