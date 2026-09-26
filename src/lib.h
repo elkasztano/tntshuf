@@ -3,19 +3,19 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 
-#define TNT_OK               0
-#define TNT_ERR_NOMEM        1
-#define TNT_ERR_INVALID      2
-#define TNT_ERR_URANDOM_OPEN 3
-#define TNT_ERR_URANDOM_READ 4
-#define TNT_ERR_INVALID_SEED 5
-#define TNT_ERR_UNKNOWN_GEN  6
-#define TNT_ERR_IFILE        7
-#define TNT_ERR_OFILE        8
-#define TNT_ERR_UNKNOWN_PERM 9
-#define TNT_ERR_INVALID_PERM 10
+#define TNT_OK			0
+#define TNT_ERR_NOMEM		1
+#define TNT_ERR_INVALID		2
+#define TNT_ERR_ENTROPY		3
+#define TNT_ERR_ENTROPY_EAGAIN	4
+#define TNT_ERR_ENTROPY_EINTR	5
+#define TNT_ERR_INVALID_SEED	6
+#define TNT_ERR_UNKNOWN_GEN	7
+#define TNT_ERR_IFILE		8
+#define TNT_ERR_OFILE		9
+#define TNT_ERR_UNKNOWN_PERM	10
+#define TNT_ERR_INVALID_PERM	11
 
 typedef struct {
 	char *ptr;
@@ -30,9 +30,6 @@ int tnt_select_perm(char *selection);
 
 /* PRNG initialization wrapper */
 int tnt_prng_init(uint64_t seed, unsigned flags);
-
-/* Initialize PRNG with specified seed */
-void tnt_prng_init_seed(uint64_t seed);
 
 /* Initialize PRNG seed from /dev/urandom */
 int tnt_prng_init_random(uint64_t *state, size_t n);

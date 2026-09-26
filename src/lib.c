@@ -2,13 +2,13 @@
 #include "cli.h"
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>
-#include <unistd.h>
 #include <stdio.h>
+#include <sys/random.h>
+#include <sys/types.h>
+#include <errno.h>
 
 #define TNT_MAX_STATESIZE 16
 
-static uint64_t x;
 static int p;
 static uint64_t state[TNT_MAX_STATESIZE];
 static uint64_t (*next)(void);
@@ -39,17 +39,15 @@ uint64_t xoshiro256pp(void) {
 	return result;
 }
 
-static uint64_t splitmix64(void) {
-	uint64_t z = (state[0] += 0x9e3779b97f4a7c15);
+static uint64_t splitmix64_generic(uint64_t *gen_state) {
+	uint64_t z = (*gen_state += 0x9e3779b97f4a7c15);
 	z = (z ^ (z >> 30)) * 0xbf58476d1ce4e5b9;
 	z = (z ^ (z >> 27)) * 0x94d049bb133111eb;
 	return z ^ (z >> 31);
 }
 
-void state_init() {
-	for (int i = 0; i < state_size; i++) {
-		state[i] = splitmix64();
-	}
+uint64_t splitmix64(void) {
+	return splitmix64_generic(&state[0]);
 }
 
 /* state[0] must not be zero */
@@ -228,54 +226,44 @@ int tnt_permutate_deterministic(tnt_token_t *tokens, size_t count, size_t k) {
 	return perm_fn(tokens, count, k);
 }
 
-void tnt_prng_init_seed(uint64_t seed) {
-	x = seed;
-}
-
 int tnt_prng_init_random(uint64_t *state, size_t n) {
-	int fd = open("/dev/urandom", O_RDONLY);
-
-	if (fd < 0) {
-		return TNT_ERR_URANDOM_OPEN;
-	}
-
 	size_t bytes_to_read = n * sizeof(uint64_t);
-	if (read(fd, state, bytes_to_read) != (ssize_t)bytes_to_read) {
-		close(fd);
-		return TNT_ERR_URANDOM_READ;
+
+	if (getrandom(state, bytes_to_read, 0) != (ssize_t)bytes_to_read) {
+		switch (errno) {
+			case EAGAIN:
+				return TNT_ERR_ENTROPY_EAGAIN;
+			case EINTR:
+				return TNT_ERR_ENTROPY_EINTR;
+			default:
+				return TNT_ERR_ENTROPY;
+		}
 	}
 
-	close(fd);
-
-	/* check for invalid seed */
-	uint64_t check = 0;
-	for (size_t i = 0; i < n; i++)
-		check |= state[i];
-
-	if (check == 0)
+	/* check for invalid seed if xorshift64star is active */
+	if (next == xorshift64star && state[0] == 0) {
 		return TNT_ERR_INVALID_SEED;
-	else
-		return TNT_OK;
+	}
+
+	return TNT_OK;
 }
 
 int tnt_prng_init_deterministic(uint64_t *state, size_t n, uint64_t seed) {
-	x = seed;
-	uint64_t check = 0;
+	uint64_t local_state = seed;
 	for (size_t i = 0; i < n; i++) {
-		state[i] = splitmix64();
-		check |= state[i];
+		state[i] = splitmix64_generic(&local_state);
 	}
 
-	if (check == 0)
+	if (next == xorshift64star && state[0] == 0) {
 		return TNT_ERR_INVALID_SEED;
-	else
-		return TNT_OK;
+	}
+
+	return TNT_OK;
 }
 
 int tnt_prng_init(uint64_t seed, unsigned flags) {
 	if (flags & TNT_USERSEED) {
-		tnt_prng_init_deterministic(state, state_size, seed);
-		return TNT_OK;
+		return tnt_prng_init_deterministic(state, state_size, seed);
 	} else {
 		return tnt_prng_init_random(state, state_size);
 	}
@@ -475,15 +463,17 @@ void tnt_shuffle_tokens(tnt_token_t *tokens, size_t count, size_t k) {
 }
 
 const char *tnt_err_str(int err) {
-	switch(err) {
+	switch (err) {
 		case TNT_ERR_NOMEM:
 			return "out of memory";
 		case TNT_ERR_INVALID:
 			return "invalid input";
-		case TNT_ERR_URANDOM_OPEN:
-			return "could not open /dev/urandom";
-		case TNT_ERR_URANDOM_READ:
-			return "could not read from /dev/urandom";
+		case TNT_ERR_ENTROPY:
+			return "could not read entropy";
+		case TNT_ERR_ENTROPY_EAGAIN:
+			return "entropy source temporarily unavailable";
+		case TNT_ERR_ENTROPY_EINTR:
+			return "entropy read interrupted by signal";
 		case TNT_ERR_INVALID_SEED:
 			return "invalid seed for PRNG";
 		case TNT_ERR_UNKNOWN_GEN:
@@ -500,4 +490,3 @@ const char *tnt_err_str(int err) {
 			return "undefined error";
 	}
 }
-

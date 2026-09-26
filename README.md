@@ -8,7 +8,7 @@ Blow up the order of your lists. `tntshuf` is a lightweight C command-line utili
 
 - **Fisher-Yates shuffling algorithm** for random permutations
 - **Selectable PRNGs**: Xoshiro256PlusPlus (recommended), Xoroshiro1024PlusPlus (for larger lists), SplitMix64 or Xorshift64Star
-- **Selectable deterministic permutation algorithms**: Milk shuffle, Mongean shuffle
+- **Selectable deterministic permutation algorithms**: Milk shuffle, Mongean shuffle, Faro shuffle
 - **Arbitrary delimiters**: Use any character to separate tokens (defaults to newline)
 - **stdin/stdout I/O**: Simple, composable pipeline behavior
 - **Optional file-based I/O**: Specify input and/or output file
@@ -60,7 +60,7 @@ tntshuf [options]
 | ------ | ------------------- | ---------- | ------------------------------------------------------------------------------ |
 | `-i`   | `--input-file`      | `FILE`     | Input file path, defaults to stdin.                                            |
 | `-o`   | `--output-file`     | `FILE`     | Output file path, defaults to stdout. _Overwrites without prompt._             |
-| `-s`   | `--seed`            | `SEED`     | Seed value for the PRNG. If not provided, the seed is read from `/dev/urandom`.|
+| `-s`   | `--seed`            | `SEED`     | Seed value for the PRNG. If not provided, the seed is read via `getrandom()`.  |
 | `-d`   | `--delimiter`       | `CHAR`     | Token delimiter (any single character). Defaults to newline (`\n`).            |
 | `-g`   | `--generator`       | `PRNG`     | Select the underlying PRNG algorithm (see [Generators](#generators) below).    |
 | `-p`   | `--permutator`      | `PERM[:N]` | Select deterministic permutation algorithm and optional iteration count `N` (default: 1; see [Permutators](#permutators)). |
