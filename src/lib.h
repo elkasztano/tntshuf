@@ -19,7 +19,6 @@
 
 typedef struct {
 	char *ptr;
-	uint32_t len;
 } tnt_token_t;
 
 /* select PRNG */

@@ -292,10 +292,14 @@ uint64_t fr64_unbiased(uint64_t range64) {
 	return (uint64_t)(prod128 >> 64);
 }
 
-/* caller is responsible for freeing raw_buf_out */
+/* caller is responsible for freeing raw_buf_out and tokens_out */
 int tnt_read_tokens(const char *file_path, char delim, tnt_token_t **tokens_out, size_t *count, char **raw_buf_out) {
 	FILE *file = stdin;
 	int should_close = 0;
+
+	if (!tokens_out || !count || !raw_buf_out) {
+		return TNT_ERR_INVALID;
+	}
 
 	if (file_path) {
 		file = fopen(file_path, "r");
@@ -346,9 +350,9 @@ int tnt_read_tokens(const char *file_path, char delim, tnt_token_t **tokens_out,
 		fclose(file);
 	}
 
-	/* ensure room for null terminator */
-	if (raw_len == raw_cap) {
-		char *new_raw = realloc(raw_buf, raw_cap + 1);
+	/* ensure room for sentinel null terminator */
+	if (raw_len >= raw_cap) {
+		char *new_raw = realloc(raw_buf, raw_len + 1);
 		if (!new_raw) {
 			free(raw_buf);
 			free(tokens);
@@ -358,43 +362,28 @@ int tnt_read_tokens(const char *file_path, char delim, tnt_token_t **tokens_out,
 	}
 	raw_buf[raw_len] = '\0';
 
-	/* tokenize in-place without copying strings */
+	/* tokenize in a single pass up to and including raw_len */
 	char *start = raw_buf;
-	for (size_t i = 0; i < raw_len; i++) {
-		if (raw_buf[i] == delim) {
-			raw_buf[i] = '\0';
-			if (*count >= ptr_cap) {
-				ptr_cap *= 2;
-				tnt_token_t *new_toks = realloc(tokens, ptr_cap * sizeof(tnt_token_t));
-				if (!new_toks) {
-					free(raw_buf);
-					free(tokens);
-					return TNT_ERR_NOMEM;
+	for (size_t i = 0; i <= raw_len; i++) {
+		if (raw_buf[i] == delim || raw_buf[i] == '\0') {
+			if (raw_buf + i > start) {
+				if (*count >= ptr_cap) {
+					ptr_cap *= 2;
+					tnt_token_t *new_toks =
+						realloc(tokens, ptr_cap * sizeof(tnt_token_t));
+					if (!new_toks) {
+						free(raw_buf);
+						free(tokens);
+						return TNT_ERR_NOMEM;
+					}
+					tokens = new_toks;
 				}
-				tokens = new_toks;
+				tokens[*count].ptr = start;
+				(*count)++;
 			}
-			tokens[*count].ptr = start;
-			tokens[*count].len = (uint32_t)(raw_buf + i - start);
-			(*count)++;
+			raw_buf[i] = '\0';
 			start = raw_buf + i + 1;
 		}
-	}
-
-	/* store final token if line is not delimiter terminated */
-	if (start < raw_buf + raw_len && *start != '\0') {
-		if (*count >= ptr_cap) {
-			ptr_cap *= 2;
-			tnt_token_t *new_toks = realloc(tokens, ptr_cap * sizeof(tnt_token_t));
-			if (!new_toks) {
-				free(raw_buf);
-				free(tokens);
-				return TNT_ERR_NOMEM;
-			}
-			tokens = new_toks;
-		}
-		tokens[*count].ptr = start;
-		tokens[*count].len = (uint32_t)(raw_buf + raw_len - start);
-		(*count)++;
 	}
 
 	*tokens_out = tokens;
@@ -421,14 +410,14 @@ int tnt_output_tokens(const char *file_path, const tnt_token_t *tokens, size_t c
 	setvbuf(file, NULL, _IOFBF, 64 * 1024);
 
 	for (size_t i = 0; i < count - 1; i++) {
-		if (fwrite(tokens[i].ptr, 1, tokens[i].len, file) != tokens[i].len ||
-		    fputc(delim, file) == EOF) {
+		if (fputs(tokens[i].ptr, file) == EOF ||
+				fputc(delim, file) == EOF) {
 			if (should_close) fclose(file);
 			return TNT_ERR_OFILE;
 		}
 	}
 
-	if (fwrite(tokens[count - 1].ptr, 1, tokens[count - 1].len, file) != tokens[count - 1].len) {
+	if (fputs(tokens[count - 1].ptr, file) == EOF) {
 		if (should_close) fclose(file);
 		return TNT_ERR_OFILE;
 	}
