@@ -19,6 +19,7 @@
 
 typedef struct {
 	char *ptr;
+	size_t len;
 } tnt_token_t;
 
 /* select PRNG */

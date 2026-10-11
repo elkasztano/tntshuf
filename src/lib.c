@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <sys/random.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <errno.h>
 
 #define TNT_MAX_STATESIZE 16
@@ -313,6 +314,15 @@ int tnt_read_tokens(const char *file_path, char delim, tnt_token_t **tokens_out,
 	setvbuf(file, NULL, _IOFBF, 64 * 1024);
 
 	size_t raw_cap = 64 * 1024;
+
+	/* for regular files, preallocate exactly once based on size */
+	if (file_path) {
+		struct stat st;
+		if (fstat(fileno(file), &st) == 0 && S_ISREG(st.st_mode) && st.st_size > 0) {
+			raw_cap = (size_t)st.st_size + 1; /* +1 for sentinel */
+		}
+	}
+
 	size_t raw_len = 0;
 	char *raw_buf = malloc(raw_cap);
 	if (!raw_buf) {
@@ -362,28 +372,32 @@ int tnt_read_tokens(const char *file_path, char delim, tnt_token_t **tokens_out,
 	}
 	raw_buf[raw_len] = '\0';
 
-	/* tokenize in a single pass up to and including raw_len */
-	char *start = raw_buf;
-	for (size_t i = 0; i <= raw_len; i++) {
-		if (raw_buf[i] == delim || raw_buf[i] == '\0') {
-			if (raw_buf + i > start) {
-				if (*count >= ptr_cap) {
-					ptr_cap *= 2;
-					tnt_token_t *new_toks =
-						realloc(tokens, ptr_cap * sizeof(tnt_token_t));
-					if (!new_toks) {
-						free(raw_buf);
-						free(tokens);
-						return TNT_ERR_NOMEM;
-					}
-					tokens = new_toks;
-				}
-				tokens[*count].ptr = start;
-				(*count)++;
-			}
-			raw_buf[i] = '\0';
-			start = raw_buf + i + 1;
+	/* tokenize in a single pass using memchr */
+	char *cur = raw_buf;
+	char *end = raw_buf + raw_len;
+	while (cur < end) {
+		char *hit = memchr(cur, delim, (size_t)(end - cur));
+		if (!hit) {
+			hit = end;
 		}
+		if (hit > cur) {
+			if (*count >= ptr_cap) {
+				ptr_cap *= 2;
+				tnt_token_t *new_toks =
+					realloc(tokens, ptr_cap * sizeof(tnt_token_t));
+				if (!new_toks) {
+					free(raw_buf);
+					free(tokens);
+					return TNT_ERR_NOMEM;
+				}
+				tokens = new_toks;
+			}
+			tokens[*count].ptr = cur;
+			tokens[*count].len = (size_t)(hit - cur);
+			(*count)++;
+		}
+		*hit = '\0';
+		cur = hit + 1;
 	}
 
 	*tokens_out = tokens;
@@ -409,28 +423,42 @@ int tnt_output_tokens(const char *file_path, const tnt_token_t *tokens, size_t c
 
 	setvbuf(file, NULL, _IOFBF, 64 * 1024);
 
-	for (size_t i = 0; i < count - 1; i++) {
-		if (fputs(tokens[i].ptr, file) == EOF ||
-				fputc(delim, file) == EOF) {
-			if (should_close) fclose(file);
-			return TNT_ERR_OFILE;
-		}
+	/* exact-size single allocation, single write */
+	size_t total = 0;
+	for (size_t i = 0; i < count; i++) {
+		total += tokens[i].len;
+	}
+	total += count; /* delimiters + trailing byte */
+
+	char *out = malloc(total);
+	if (!out) {
+		if (should_close) fclose(file);
+		return TNT_ERR_NOMEM;
 	}
 
-	if (fputs(tokens[count - 1].ptr, file) == EOF) {
+	char closing = (flags & TNT_ZEROTERM) ? '\0' : '\n';
+
+	size_t off = 0;
+	for (size_t i = 0; i < count; i++) {
+		if (i + 1 < count) {
+			__builtin_prefetch(tokens[i + 1].ptr);
+		}
+		memcpy(out + off, tokens[i].ptr, tokens[i].len);
+		off += tokens[i].len;
+		out[off++] = (i + 1 < count) ? delim : closing;
+	}
+
+	if (flags & TNT_NONEWLINE) {
+		off--; /* drop the trailing byte */
+	}
+
+	if (fwrite(out, 1, off, file) != off) {
+		free(out);
 		if (should_close) fclose(file);
 		return TNT_ERR_OFILE;
 	}
 
-	char closing = '\n';
-	if (flags & TNT_ZEROTERM)
-		closing = '\0';
-	if (!(flags & TNT_NONEWLINE)) {
-		if (fputc(closing, file) == EOF) {
-			if (should_close) fclose(file);
-			return TNT_ERR_OFILE;
-		}
-	}
+	free(out);
 
 	if (should_close) {
 		fclose(file);

@@ -1,5 +1,5 @@
 APPNAME   := $(notdir $(CURDIR))
-VERSION   := 1.11
+VERSION   := 1.12
 TRIPLET   := $(shell $(CC) -dumpmachine 2>/dev/null || uname -m)
 TARGETDIR := target
 OBJDIR    := $(TARGETDIR)/obj

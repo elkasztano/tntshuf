@@ -123,6 +123,7 @@ tnt_cli_t tnt_cli(int argc, char **argv, int *err) {
 		if (cli.echo != NULL) {
 			for (size_t i = 0; i < cli.echo_count; i++) {
 				cli.echo[i].ptr = argv[optind + i];
+				cli.echo[i].len = strlen(argv[optind + i]);
 			}
 		} else {
 			*err = TNT_ERR_NOMEM;

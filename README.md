@@ -13,11 +13,12 @@ Blow up the order of your lists. `tntshuf` is a lightweight C command-line utili
 - **stdin/stdout I/O**: Simple, composable pipeline behavior
 - **Optional file-based I/O**: Specify input and/or output file
 - **Shuffling command-line arguments**: Treat arguments as input lines
+- **Fast bulk I/O**: SIMD-accelerated tokenization via `memchr`, exact-size input preallocation, and single-write output
 - **Lightweight**: Minimal dependencies, fast execution
 
 ## Limitations
 
-- **Memory-bound**: All tokens must fit in memory (Fisher-Yates requires loading the entire input)
+- **Memory-bound**: All tokens and the raw input buffer must fit in memory (Fisher-Yates requires loading the entire input). The output is also assembled in memory before being written in a single bulk operation.
 - **Limited number of sequences**: The 64-bit PRNGs can only produce at most 2^64 distinct sequences.
   For lists with more than 20 elements, Xoshiro256PlusPlus or Xoroshiro1024PlusPlus is recommended.
 
@@ -179,7 +180,7 @@ An alternative PRNG is **Xorshift64Star**, also developed by **Sebastiano Vigna*
 
 ### Fastrange Algorithm
 
-**Fastrange** (also called "nearly divisionless" random integer generation) is a method for uniformly mapping a 64-bit random integer to a range [0, p) using 128-bit multiplication and bit-shifting, avoiding expensive modulo operations. Developed by **Daniel Lemire**, it provides constant-time, efficient range reduction on modern processors.
+**Fastrange** (also called "nearly divisionless" random integer generation) is a method for uniformly mapping a 64-bit random integer to a range [0, p) using 128-bit multiplication and bit-shifting, avoiding expensive modulo operations. Developed by **Daniel Lemire**, it provides efficient range reduction on modern processors. `tntshuf` uses the *unbiased* variant, which applies rejection sampling to eliminate the modulo bias present in naive range reduction; this is constant-time with overwhelming probability rather than strictly bounded.
 
 - **Reference**: Lemire, D. (2018). "Fast Random Integer Generation in an Interval." [arXiv:1805.10941](https://arxiv.org/abs/1805.10941)
 
